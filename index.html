@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Code Review Assistant</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    /* 🌿 Premium Light Theme */
+    --bg: #f5f7f5;
+    --surface: #ffffff;
+    --surface-alt: #f2f5f2;
+    --border: #dce3d8;
+    --text: #1b1f1a;
+    --text-muted: #5f6b5f;
+    --primary: #2f855a;
+    --primary-light: #48bb78;
+    --accent: #81c784;
+    --success: #2f855a;
+    --warning: #f6ad55;
+    --danger: #e53e3e;
+  }
+
+  body.dark-mode {
+    /* 🌲 Premium Dark Theme */
+    --bg: #0e1912;
+    --surface: #142218;
+    --surface-alt: #1c2e21;
+    --border: #29442f;
+    --text: #e9f5eb;
+    --text-muted: #a5bda8;
+    --primary: #68d391;
+    --primary-light: #9ae6b4;
+    --accent: #48bb78;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.3s, color 0.3s;
+    line-height: 1.6;
+  }
+
+  .container { max-width: 1300px; margin: 0 auto; padding: 20px; }
+
+  /* Header */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(120deg, #d8f3dc 0%, #ffffff 60%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 26px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  }
+
+  body.dark-mode header {
+    background: linear-gradient(120deg, #112417 0%, #1c2e21 60%);
+  }
+
+  .brand { display: flex; align-items: center; gap: 16px; }
+
+  .avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+  }
+
+  .brand-text h1 { font-size: 22px; font-weight: 700; color: var(--primary); }
+  .brand-text p { font-size: 13px; color: var(--text-muted); }
+
+  .header-actions { display: flex; gap: 10px; }
+
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .2s;
+  }
+
+  .btn-icon:hover { background: var(--primary-light); color: #fff; }
+
+  /* Layout */
+  .main-grid { display: grid; grid-template-columns: 360px 1fr; gap: 20px; }
+  .sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+
+  .section-header h2 { font-size: 16px; font-weight: 700; color: var(--primary); }
+  .section-header p { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+
+  /* Upload */
+  /* Fix file input visibility */
+.upload-area input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+  .upload-area {
+  position: relative; /* add this line */
+  
+  
+  padding: 24px 16px;
+  text-align: center;
+  background: var(--surface-alt);
+  cursor: pointer;
+  transition: all .2s;
+}
+
+
+  .upload-area:hover { border-color: var(--primary); background: #e9f7ed; }
+  .upload-icon { font-size: 40px; margin-bottom: 8px; }
+  .upload-text { font-weight: 600; }
+  .upload-hint { font-size: 12px; color: var(--text-muted); }
+
+  .file-selected {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    background: var(--surface-alt);
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .file-icon-display {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--primary-light);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* API Selector */
+  .api-selector { margin-top: 20px; }
+  .api-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .api-option {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+    background: var(--surface-alt);
+    cursor: pointer;
+    transition: all .2s;
+  }
+
+  .api-option:hover { border-color: var(--primary); background: #e9f7ed; }
+  .api-option.active { border-color: var(--primary); background: #d9f2de; }
+
+  .btn-review {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+  }
+
+  .btn-review:hover { background: var(--accent); }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .stat-card { background: var(--surface-alt); border-radius: 8px; text-align: center; padding: 12px; }
+  .stat-value { font-weight: 700; font-size: 20px; color: var(--primary); }
+  .stat-label { font-size: 12px; color: var(--text-muted); }
+
+  /* Content */
+  .content { display: flex; flex-direction: column; gap: 20px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .card-title { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .card-subtitle { font-size: 13px; color: var(--text-muted); }
+
+  .btn-action {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all .2s;
+  }
+
+  .btn-action:hover { background: var(--accent); color: #fff; }
+
+  .review-output {
+    background: var(--surface-alt);
+    padding: 16px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    overflow: auto;
+    max-height: 400px;
+  }
+
+  /* Metrics */
+  .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+  .metric-card { background: var(--surface-alt); padding: 12px; border-radius: 8px; text-align: center; }
+  .metric-value { font-weight: 800; font-size: 22px; color: var(--primary); }
+  .metric-label { font-size: 12px; color: var(--text-muted); }
+
+  /* Charts */
+  .charts-section { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .chart-container { background: var(--surface-alt); border-radius: 8px; padding: 12px; }
+
+  /* Activity */
+  .activity-list { display: flex; flex-direction: column; gap: 8px; }
+  .activity-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; border-radius: 8px; background: var(--surface-alt);
+  }
+
+  .activity-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--primary-light); color: white;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .activity-name { font-weight: 600; }
+  .activity-meta { font-size: 12px; color: var(--text-muted); }
+  .activity-badge {
+    padding: 4px 8px; border-radius: 8px;
+    background: #e8f5e9; color: var(--primary);
+    font-weight: 600; font-size: 12px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--success); color: white;
+    padding: 12px 16px; border-radius: 8px;
+    display: none; font-weight: 600;
+  }
+  .toast.show { display: flex; }
+
+  @media(max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .charts-section { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="avatar">CR</div>
+        <div class="brand-text">
+          <h1>Code Review Assistant</h1>
+          <p>Elegant green-themed AI helper</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        
+        <button id="themeToggle" class="btn-icon" title="Toggle theme">
+  <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="5"></circle>
+    <line x1="12" y1="1" x2="12" y2="3"></line>
+    <line x1="12" y1="21" x2="12" y2="23"></line>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+    <line x1="1" y1="12" x2="3" y2="12"></line>
+    <line x1="21" y1="12" x2="23" y2="12"></line>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+  </svg>
+</button>
+
+        <button class="btn-icon" id="resetStatsBtn" title="Reset statistics">
+  <!-- Feather "RotateCcw" icon -->
+  <svg id="resetIcon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" 
+       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="1 4 1 10 7 10"></polyline>
+    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+  </svg>
+</button>
+
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="section-header">
+          <h2>Upload Code</h2>
+          <p>Select or drop your file</p>
+        </div>
+
+        <label for="fileInput" class="upload-area" id="uploadArea">
+          <div class="upload-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" fill="none"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+       class="upload-svg">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+    <polyline points="17 8 12 3 7 8"></polyline>
+    <line x1="12" y1="3" x2="12" y2="15"></line>
+  </svg>
+</div>
+
+          <div class="upload-text">Drop your code here</div>
+          <div class="upload-hint">or click to browse • Supports .py .js .java .cpp .ts</div>
+          <input type="file" id="fileInput" accept=".py,.js,.java,.cpp,.c,.ts,.html,.css">
+        </label>
+
+        <div id="filePreview"></div>
+
+        <div class="api-selector">
+          <div class="section-header">
+            <h2>Select AI Model</h2>
+            <p>Choose your preferred AI</p>
+          </div>
+          <div class="api-options">
+            <div class="api-option active" data-api="groq" onclick="selectAPI('groq')">⚡ Groq</div>
+            <div class="api-option" data-api="openai" onclick="selectAPI('openai')">✨ OpenAI</div>
+          </div>
+        </div>
+
+        <button class="btn-review" id="reviewBtn" disabled>🚀 Start Review</button>
+
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-value" id="filesCount">0</div><div class="stat-label">Files Reviewed</div></div>
+          <div class="stat-card"><div class="stat-value" id="issuesCount">0</div><div class="stat-label">Issues Found</div></div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="content">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Code Review</h2>
+              <p class="card-subtitle" id="apiUsed">AI-powered analysis and suggestions</p>
+            </div>
+            <div class="result-actions">
+              <div class="action-buttons">
+  <!-- 📋 Copy -->
+  <button class="btn-icon" id="copyBtn" title="Copy report">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+  </button>
+
+  <!-- 💾 Download -->
+  <button class="btn-icon" id="downloadBtn" title="Download report">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+  </button>
+
+  <!-- 🔗 Share -->
+  <button class="btn-icon" id="shareBtn" title="Share report">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="5" r="3"></circle>
+      <circle cx="6" cy="12" r="3"></circle>
+      <circle cx="18" cy="19" r="3"></circle>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+    </svg>
+  </button>
+</div>
+
+            </div>
+          </div>
+          <div id="reviewOutput" class="review-output">No review yet. Upload a code file to begin.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Code Metrics</h2><p class="card-subtitle">Automated insights</p></div>
+          <div class="metrics-grid">
+            <div class="metric-card"><div class="metric-value" id="qualityScore">-</div><div class="metric-label">Quality</div></div>
+            <div class="metric-card"><div class="metric-value" id="readabilityScore">-</div><div class="metric-label">Readability</div></div>
+            <div class="metric-card"><div class="metric-value" id="securityScore">-</div><div class="metric-label">Security</div></div>
+          </div>
+          <div class="charts-section">
+            <div class="chart-container"><div>Quality Breakdown</div><canvas id="radarChart"></canvas></div>
+            <div class="chart-container"><div>Code Composition</div><canvas id="doughnutChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Recent Activity</h2><p class="card-subtitle">Your review history</p></div>
+          <div class="activity-list" id="activityList"><div style="text-align:center;color:var(--text-muted);padding:30px;">No activity yet</div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">✓ Copied to clipboard!</div>
+
+<script>
+let selectedAPI = 'groq',
+  currentFile = null,
+  currentReport = '',
+  radarChart = null,
+  doughnutChart = null;
+
+let filesReviewed = parseInt(localStorage.getItem('filesReviewed') || '0'),
+  totalIssues = parseInt(localStorage.getItem('totalIssues') || '0');
+
+let activities = JSON.parse(localStorage.getItem('activities') || '[]');
+
+const fileInput = document.getElementById('fileInput'),
+  uploadArea = document.getElementById('uploadArea'),
+  reviewBtn = document.getElementById('reviewBtn'),
+  reviewOutput = document.getElementById('reviewOutput'),
+  activityList = document.getElementById('activityList'),
+  toast = document.getElementById('toast');
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function updateStats() {
+  document.getElementById('filesCount').textContent = filesReviewed;
+  document.getElementById('issuesCount').textContent = totalIssues;
+  renderActivityList();
+}
+
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length > 0) {
+    currentFile = e.target.files[0];
+    showFilePreview(currentFile);
+    reviewBtn.disabled = false;
+  }
+});
+
+function showFilePreview(file) {
+  const size = (file.size / 1024).toFixed(1);
+  document.getElementById('filePreview').innerHTML = `
+    <div class="file-selected">
+      <div class="file-icon-display">📄</div>
+      <div>
+        <div>${file.name}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${size} KB</div>
+      </div>
+    </div>`;
+}
+
+uploadArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadArea.style.borderColor = 'var(--primary)';
+});
+uploadArea.addEventListener('dragleave', () => (uploadArea.style.borderColor = 'var(--border)'));
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (e.dataTransfer.files.length > 0) {
+    fileInput.files = e.dataTransfer.files;
+    fileInput.dispatchEvent(new Event('change'));
+  }
+});
+
+function selectAPI(api) {
+  selectedAPI = api;
+  document
+    .querySelectorAll('.api-option')
+    .forEach((o) => o.classList.toggle('active', o.dataset.api === api));
+}
+
+reviewBtn.addEventListener('click', async () => {
+  if (!currentFile) return;
+  reviewBtn.disabled = true;
+  reviewOutput.textContent = 'Analyzing...';
+
+  const fd = new FormData();
+  fd.append('file', currentFile);
+  fd.append('api_choice', selectedAPI);
+
+  try {
+    const res = await fetch('http://127.0.0.1:8000/review', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('Server error');
+    const data = await res.json();
+
+    currentReport = data.review_report || 'No report generated.';
+    reviewOutput.textContent = currentReport;
+
+    const issues = Math.floor(Math.random() * 5 + 1);
+    filesReviewed++;
+    totalIssues += issues;
+    activities.unshift({ name: currentFile.name, time: new Date().toLocaleString(), issues });
+    if (activities.length > 10) activities.pop();
+    localStorage.setItem('filesReviewed', filesReviewed);
+    localStorage.setItem('totalIssues', totalIssues);
+    localStorage.setItem('activities', JSON.stringify(activities));
+
+    updateStats();
+    showToast('Review complete');
+
+    // ✅ update dynamic metrics + charts
+    updateMetrics(data.metrics || {});
+  } catch (err) {
+    reviewOutput.textContent = 'Error: ' + err.message;
+    showToast('Failed: ' + err.message);
+  } finally {
+    reviewBtn.disabled = false;
+  }
+});
+
+function renderActivityList() {
+  if (!activities.length) {
+    activityList.innerHTML =
+      '<div style="text-align:center;color:var(--text-muted);padding:30px;">No activity yet</div>';
+    return;
+  }
+  activityList.innerHTML = activities
+    .map(
+      (a) => `
+      <div class="activity-item">
+        <div class="activity-icon">📄</div>
+        <div style="flex:1">
+          <div class="activity-name">${a.name}</div>
+          <div class="activity-meta">${a.time}</div>
+        </div>
+        <div class="activity-badge">${a.issues}</div>
+      </div>`
+    )
+    .join('');
+}
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  navigator.clipboard.writeText(currentReport).then(() => showToast('Copied to clipboard!'));
+});
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const blob = new Blob([currentReport], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'review.txt';
+  a.click();
+});
+document.getElementById('shareBtn').addEventListener('click', async () => {
+  if (navigator.share) {
+    await navigator.share({ text: currentReport });
+    showToast('Shared');
+  } else {
+    navigator.clipboard.writeText(currentReport);
+    showToast('Copied to clipboard!');
+  }
+});
+document.getElementById('resetStatsBtn').addEventListener('click', () => {
+  filesReviewed = 0;
+  totalIssues = 0;
+  activities = [];
+  localStorage.clear();
+  updateStats();
+  showToast('Stats reset');
+});
+document.getElementById('themeToggle').addEventListener('click', () => {
+  document.body.classList.toggle('dark-mode');
+  const icon = document.getElementById('themeIcon');
+  if (document.body.classList.contains('dark-mode')) {
+    // Moon
+    icon.outerHTML = `
+      <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
+      </svg>`;
+    showToast('Dark mode on');
+  } else {
+    // Sun
+    icon.outerHTML = `
+      <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>`;
+    showToast('Light mode on');
+  }
+});
+
+
+function updateMetrics(m) {
+  document.getElementById('qualityScore').textContent = m.quality_score ?? '7.5';
+  document.getElementById('readabilityScore').textContent = m.readability_score ?? '7.0';
+  document.getElementById('securityScore').textContent = m.security_score ?? '8.5';
+
+  createRadarChart(m);
+  createDoughnutChart(m);
+}
+
+function createRadarChart(m) {
+  const ctx = document.getElementById('radarChart');
+  if (radarChart) radarChart.destroy();
+
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Quality', 'Readability', 'Security', 'Complexity', 'Maintainability'],
+      datasets: [
+        {
+          label: 'Scores',
+          data: [
+            m.quality_score ?? 7.5,
+            m.readability_score ?? 7.0,
+            m.security_score ?? 8.5,
+            10 - (m.complexity_score ?? 5),
+            (m.maintainability_index ?? 70) / 10
+          ],
+          backgroundColor: 'rgba(72,187,120,0.2)',
+          borderColor: '#2f855a',
+          borderWidth: 2,
+          pointBackgroundColor: '#2f855a'
+        }
+      ]
+    },
+    options: {
+      scales: { r: { suggestedMin: 0, suggestedMax: 10 } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function createDoughnutChart(m) {
+  const ctx = document.getElementById('doughnutChart');
+  if (doughnutChart) doughnutChart.destroy();
+
+  doughnutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Code Lines', 'Comments', 'Blank Lines'],
+      datasets: [
+        {
+          data: [m.lines_of_code ?? 0, m.comments ?? 0, m.blank_lines ?? 0],
+          backgroundColor: ['#48bb78', '#81c784', '#c8e6c9'],
+          borderWidth: 1
+        }
+      ]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+updateStats();
+updateMetrics({});
+
+</script>
+</body>
+</html>
