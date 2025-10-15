@@ -1,4 +1,4 @@
-# 🔍 Code Review Assistant
+# Code Review Assistant
 
 An AI-powered code review tool that analyzes code files and provides improvement suggestions using Groq and OpenAI's GPT model.
 
@@ -17,3 +17,4 @@ An AI-powered code review tool that analyzes code files and provides improvement
 git clone <your-repo-url>
 
 cd code_review_assistant
+
